@@ -1693,13 +1693,25 @@ Timeout: 60 sec
         msg = r"""
 Send Leech Caption Template. You can use placeholders:
 
-{filename} -> file name with extension
-{basename} -> file name without extension
-{ext} -> file extension
-{audio} -> 🎵 if audio-only, empty otherwise
-{video} -> 🎬 if video, empty otherwise
-{image} -> 🖼️ if image, empty otherwise
-{document} -> 📄 if document, empty otherwise
+{filename}: The full file name (with extension)
+{basename}: The file name without extension
+{ext}: The file extension (without dot)
+{audio}: 🎵 (if audio and not video)
+{video}: 🎬 (if video)
+{image}: 🖼️ (if image and not video)
+{document}: 📄 (if not video, audio, or image)
+{duration}: Duration in HH:MM:SS format
+{seconds}: Duration in seconds
+{width}: Video width (if available)
+{height}: Video height (if available)
+{resolution}: Resolution (if available)
+{quality}: Quality (if available)
+{artist}: Artist (if available)
+{title}: Title (if available)
+{vcodec}: Video codec (if available)
+{acodec}: Audio codec (if available)
+{subs}: Subtitles (if available)
+{text}: The original caption text
 
 Example: <b>{filename}</b> {video}
 

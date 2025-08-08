@@ -387,6 +387,7 @@ class TelegramUploader:
             "{subs}": subs or "",
             "{text}": cap_mono,
         }
+        text = template
         for k, v in tokens.items():
             text = text.replace(k, v)
         if not text.strip():
