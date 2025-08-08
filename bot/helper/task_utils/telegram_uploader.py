@@ -188,24 +188,9 @@ class TelegramUploader:
         return True
 
     async def _prepare_file(self, file_, dirpath, delete_file):
+        cap_mono = f"{file_}"
+        # Filename prefix/suffix logic for renaming file on disk remains unchanged
         if self._lprefix or self._lsuffix:
-            if self._lprefix:
-                cap_mono = f"{self._lprefix} {file_}"
-                self._lprefix = re_sub(
-                    "<.*?>",
-                    "",
-                    self._lprefix
-                )
-            else:
-                cap_mono = f"{file_}"
-
-            if self._lsuffix:
-                cap_mono = f"{cap_mono} {self._lsuffix}"
-                self._lsuffix = re_sub(
-                    "<.*?>",
-                    "",
-                    self._lsuffix
-                )
             if (
                 self._listener.seed
                 and not self._listener.new_dir
@@ -235,8 +220,7 @@ class TelegramUploader:
                     new_path
                 )
                 self._up_path = new_path
-        else:
-            cap_mono = f"{file_}"
+        # Do not add prefix/suffix to cap_mono here; do it after template is applied
 
         # Truncate long filenames using the current filename on disk (after any prefix/suffix rename)
         cur_file = ospath.basename(self._up_path)
@@ -328,7 +312,13 @@ class TelegramUploader:
     async def _apply_caption_template(self, cap_mono, file_):
         template = self._lcaptemp
         if not template:
-            return await self._prepare_caption_font(cap_mono)
+            # If no template, apply prefix/suffix to the filename as caption
+            caption = cap_mono
+            if self._lprefix:
+                caption = f"{self._lprefix} {caption}"
+            if self._lsuffix:
+                caption = f"{caption} {self._lsuffix}"
+            return await self._prepare_caption_font(caption)
         try:
             is_video, is_audio, is_image = await get_document_type(self._up_path)
         except:
@@ -392,6 +382,11 @@ class TelegramUploader:
             text = text.replace(k, v)
         if not text.strip():
             text = cap_mono
+        # Add prefix/suffix to the final caption
+        if self._lprefix:
+            text = f"{self._lprefix} {text}"
+        if self._lsuffix:
+            text = f"{text} {self._lsuffix}"
         text = await self._prepare_caption_font(text)
         return text
 
