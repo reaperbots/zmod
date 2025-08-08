@@ -348,8 +348,24 @@ class TelegramUploader:
         ss = seconds % 60
         duration_hms = f"{hh:02}:{mm:02}:{ss:02}"
 
-        # Apply prefix/suffix HTML tags to cap_mono after applying template
-        text = template
+        # Ensure width, height, resolution, quality, vcodec, acodec, subs are always defined
+        width = height = resolution = quality = vcodec = acodec = subs = None
+        if is_video:
+            try:
+                import PIL
+                from PIL import Image
+                duration = seconds
+                thumb = None
+                thumb = await get_video_thumbnail(self._up_path, duration)
+                if thumb is not None:
+                    with Image.open(thumb) as img:
+                        width, height = img.size
+                else:
+                    width = 480
+                    height = 320
+            except Exception:
+                width = 480
+                height = 320
         tokens = {
             "{filename}": file_,
             "{basename}": basename,
@@ -362,13 +378,13 @@ class TelegramUploader:
             "{seconds}": f"{seconds}",
             "{width}": f"{width}" if width else "",
             "{height}": f"{height}" if height else "",
-            "{resolution}": resolution,
-            "{quality}": quality,
+            "{resolution}": resolution or "",
+            "{quality}": quality or "",
             "{artist}": artist or "",
             "{title}": title or "",
-            "{vcodec}": vcodec,
-            "{acodec}": acodec,
-            "{subs}": subs,
+            "{vcodec}": vcodec or "",
+            "{acodec}": acodec or "",
+            "{subs}": subs or "",
             "{text}": cap_mono,
         }
         for k, v in tokens.items():
