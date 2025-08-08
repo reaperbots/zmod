@@ -189,8 +189,16 @@ class TelegramUploader:
 
     async def _prepare_file(self, file_, dirpath, delete_file):
         cap_mono = f"{file_}"
-        # Filename prefix/suffix logic for renaming file on disk remains unchanged
+        # Sanitize prefix/suffix for filesystem use (keep original for captions)
         if self._lprefix or self._lsuffix:
+            # Strip HTML tags then remove illegal filename characters and control chars
+            safe_prefix = re_sub(r'[\\/:*?"<>|\r\n\t]+', ' ', re_sub(r'<[^>]+>', '', self._lprefix)).strip() if self._lprefix else ""
+            safe_suffix = re_sub(r'[\\/:*?"<>|\r\n\t]+', ' ', re_sub(r'<[^>]+>', '', self._lsuffix)).strip() if self._lsuffix else ""
+            # Collapse whitespace and limit overly long components
+            safe_prefix = re_sub(r'\s+', ' ', safe_prefix)[:50].strip() if safe_prefix else ""
+            safe_suffix = re_sub(r'\s+', ' ', safe_suffix)[:50].strip() if safe_suffix else ""
+            new_name = " ".join([p for p in [safe_prefix, file_, safe_suffix] if p]).strip()
+
             if (
                 self._listener.seed
                 and not self._listener.new_dir
@@ -204,7 +212,7 @@ class TelegramUploader:
                 )
                 new_path = ospath.join(
                     dirpath,
-                    f"{self._lprefix} {file_} {self._lsuffix}"
+                    new_name
                 )
                 self._up_path = await copy(
                     self._up_path,
@@ -213,7 +221,7 @@ class TelegramUploader:
             else:
                 new_path = ospath.join(
                     dirpath,
-                    f"{self._lprefix} {file_} {self._lsuffix}"
+                    new_name
                 )
                 await rename(
                     self._up_path,
