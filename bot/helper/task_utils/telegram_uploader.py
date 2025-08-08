@@ -232,27 +232,29 @@ class TelegramUploader:
         else:
             cap_mono = f"{file_}"
 
-        if len(file_) > 60:
-            if is_archive(file_):
-                name = get_base_name(file_)
-                ext = file_.split(
+        # Truncate long filenames using the current filename on disk (after any prefix/suffix rename)
+        cur_file = ospath.basename(self._up_path)
+        if len(cur_file) > 60:
+            if is_archive(cur_file):
+                name = get_base_name(cur_file)
+                ext = cur_file.split(
                     name,
                     1
                 )[1]
             elif match := re_match(
                 r".+(?=\..+\.0*\d+$)|.+(?=\.part\d+\..+$)",
-                file_
+                cur_file
             ):
                 name = match.group(0)
-                ext = file_.split(
+                ext = cur_file.split(
                     name,
                     1
                 )[1]
-            elif len(fsplit := ospath.splitext(file_)) > 1:
+            elif len(fsplit := ospath.splitext(cur_file)) > 1:
                 name = fsplit[0]
                 ext = fsplit[1]
             else:
-                name = file_
+                name = cur_file
                 ext = ""
             extn = len(ext)
             remain = 60 - extn
