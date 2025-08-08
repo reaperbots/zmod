@@ -154,6 +154,19 @@ async def get_user_settings(from_user):
         lcapfont = "Not Added"
 
     if user_dict.get(
+        "lcaptemp",
+        False
+    ):
+        lcaptemp = "Added"
+    elif (
+        "lcaptemp" not in user_dict
+        and (LCT := config_dict["LEECH_CAPTION_TEMPLATE"])
+    ):
+        lcaptemp = "Added"
+    else:
+        lcaptemp = "Not Added"
+
+    if user_dict.get(
         "leech_dest",
         False
     ):
@@ -381,6 +394,7 @@ async def get_user_settings(from_user):
 <code>Leech Prefix     :</code> <b>{lprefix}</b>
 <code>Leech Suffix     :</code> <b>{lsuffix}</b>
 <code>Leech Cap Font   :</code> <b>{lcapfont}</b>
+<code>Leech Cap Temp   :</code> <b>{lcaptemp}</b>
 <code>Leech Split Size :</code> <b>{split_size}</b>
 <code>Leech Dest       :</code> <b>{leech_dest}</b>
 <code>Metadata Text    :</code> <b>{metatxt}</b>
@@ -708,6 +722,7 @@ async def edit_user_settings(client, query):
         "metatxt",
         "attachmenturl",
         "lcapfont",
+        "lcaptemp",
         "index_url",
         "name_sub",
         "thumb_layout"
@@ -716,7 +731,7 @@ async def edit_user_settings(client, query):
         update_user_ldata(
             user_id,
             data[2],
-            f"{global_extension_filter}"
+            ""
         )
         await update_user_settings(query)
         if config_dict["DATABASE_URL"]:
@@ -819,6 +834,10 @@ async def edit_user_settings(client, query):
             "ᴄᴀᴘ\nꜰᴏɴᴛ",
             f"userset {user_id} leech_cap_font"
         )
+        buttons.data_button(
+            "ᴄᴀᴘ\nᴛᴇᴍᴘ",
+            f"userset {user_id} leech_cap_temp"
+        )
         if user_dict.get(
             "lcapfont",
             False
@@ -830,6 +849,17 @@ async def edit_user_settings(client, query):
             lcapfont = LC
         else:
             lcapfont = "None"
+        if user_dict.get(
+            "lcaptemp",
+            False
+        ):
+            lcaptemp = user_dict["lcaptemp"]
+        elif "lcaptemp" not in user_dict and (
+            LCT := config_dict["LEECH_CAPTION_TEMPLATE"]
+        ):
+            lcaptemp = LCT
+        else:
+            lcaptemp = "None"
         if (
             user_dict.get(
                 "as_doc",
@@ -988,6 +1018,7 @@ async def edit_user_settings(client, query):
 <code>Leech Prefix     :</code> <b>{escape(lprefix)}</b>
 <code>Leech Suffix     :</code> <b>{escape(lsuffix)}</b>
 <code>Leech Cap Font   :</code> <b>{escape(lcapfont)}</b>
+<code>Leech Cap Temp   :</code> <b>{escape(lcaptemp)}</b>
 <code>Leech Destination:</code> <b>{leech_dest}</b>
 <code>Metadata Text    :</code> <b>{escape(metatxt)}</b>
 <code>Attachment Url   :</code> <b>{escape(attachmenturl)}</b>
@@ -1631,6 +1662,68 @@ Timeout: 60 sec
                 set_option(
                     event,
                     "lcapfont"
+                ),
+                update_user_settings(query)
+            )
+    elif data[2] == "leech_cap_temp":
+        await query.answer()
+        buttons = ButtonMaker()
+        if (
+            user_dict.get(
+                "lcaptemp",
+                False
+            )
+            or "lcaptemp" not in user_dict
+            and config_dict["LEECH_CAPTION_TEMPLATE"]
+        ):
+            buttons.data_button(
+                "ʀᴇᴍᴏᴠᴇ\nᴄᴀᴘᴛɪᴏɴ ᴛᴇᴍᴘ",
+                f"userset {user_id} lcaptemp"
+            )
+        buttons.data_button(
+            "ʙᴀᴄᴋ",
+            f"userset {user_id} leech",
+            position="footer"
+        )
+        buttons.data_button(
+            "ᴄʟᴏꜱᴇ",
+            f"userset {user_id} close",
+            position="footer"
+        )
+        msg = r"""
+Send Leech Caption Template. You can use placeholders:
+
+{filename} -> file name with extension
+{basename} -> file name without extension
+{ext} -> file extension
+{audio} -> 🎵 if audio-only, empty otherwise
+{video} -> 🎬 if video, empty otherwise
+{image} -> 🖼️ if image, empty otherwise
+{document} -> 📄 if document, empty otherwise
+
+Example: <b>{filename}</b> {video}
+
+Timeout: 60 sec
+"""
+        await edit_message(
+            message,
+            msg,
+            buttons.build_menu(2),
+        )
+        try:
+            event = await event_handler(
+                client,
+                query
+            )
+        except ListenerTimeout:
+            await update_user_settings(query)
+        except ListenerStopped:
+            pass
+        else:
+            await gather(
+                set_option(
+                    event,
+                    "lcaptemp"
                 ),
                 update_user_settings(query)
             )

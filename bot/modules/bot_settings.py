@@ -1388,6 +1388,13 @@ async def load_config():
     if len(LEECH_CAPTION_FONT) == 0:
         LEECH_CAPTION_FONT = ""
 
+    LEECH_CAPTION_TEMPLATE = environ.get(
+        "LEECH_CAPTION_TEMPLATE",
+        ""
+    )
+    if len(LEECH_CAPTION_TEMPLATE) == 0:
+        LEECH_CAPTION_TEMPLATE = ""
+
     METADATA_TXT = environ.get(
         "METADATA_TXT",
         ""
@@ -2130,6 +2137,7 @@ async def load_config():
             "LEECH_FILENAME_PREFIX": LEECH_FILENAME_PREFIX,
             "LEECH_FILENAME_SUFFIX": LEECH_FILENAME_SUFFIX,
             "LEECH_CAPTION_FONT": LEECH_CAPTION_FONT,
+            "LEECH_CAPTION_TEMPLATE": LEECH_CAPTION_TEMPLATE,
             "LEECH_SPLIT_SIZE": LEECH_SPLIT_SIZE,
             "MEDIA_GROUP": MEDIA_GROUP,
             "MIXED_LEECH": MIXED_LEECH,

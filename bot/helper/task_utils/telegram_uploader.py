@@ -82,6 +82,7 @@ class TelegramUploader:
         self._lprefix = ""
         self._lsuffix = ""
         self._lcapfont = ""
+        self._lcaptemp = ""
         self._media_group = False
         self._is_private = False
         self._sent_msg = None
@@ -117,6 +118,11 @@ class TelegramUploader:
         self._lcapfont = self._listener.user_dict.get("lcapfont") or (
             config_dict["LEECH_CAPTION_FONT"]
             if "lcapfont" not in self._listener.user_dict
+            else ""
+        )
+        self._lcaptemp = self._listener.user_dict.get("lcaptemp") or (
+            config_dict["LEECH_CAPTION_TEMPLATE"]
+            if "lcaptemp" not in self._listener.user_dict
             else ""
         )
         if not await aiopath.exists(self._thumb): # type: ignore
@@ -310,16 +316,67 @@ class TelegramUploader:
         style = self._lcapfont.lower()
         if style in font_styles:
             tags = font_styles[style]
-            if tags in [
-                "bi",
-                "bu",
-                "iu",
-                "biu"
-            ]:
-                cap_mono = f"<{tags[0]}><{tags[1]}>{cap_mono}</{tags[1]}></{tags[0]}>"
+            if tags == "code":
+                cap_mono = f"<code>{cap_mono}</code>"
             else:
-                cap_mono = f"<{tags}>{cap_mono}</{tags}>"
+                tag_seq = list(tags)
+                open_tags = "".join(f"<{t}>" for t in tag_seq)
+                close_tags = "".join(f"</{t}>" for t in reversed(tag_seq))
+                cap_mono = f"{open_tags}{cap_mono}{close_tags}"
         return cap_mono
+
+    async def _apply_caption_template(self, cap_mono, file_):
+        template = self._lcaptemp
+        if not template:
+            return await self._prepare_caption_font(cap_mono)
+        try:
+            is_video, is_audio, is_image = await get_document_type(self._up_path)
+        except:
+            is_video = is_audio = is_image = False
+        basename, ext = ospath.splitext(file_)
+        # Gather extra media details for placeholders
+        try:
+            seconds, artist, title = await get_media_info(self._up_path)
+        except:
+            seconds, artist, title = (0, None, None)
+        try:
+            seconds = int(seconds)
+        except:
+            seconds = 0
+        hh = seconds // 3600
+        mm = (seconds % 3600) // 60
+        ss = seconds % 60
+        duration_hms = f"{hh:02}:{mm:02}:{ss:02}"
+
+        # Apply prefix/suffix HTML tags to cap_mono after applying template
+        text = template
+        tokens = {
+            "{filename}": file_,
+            "{basename}": basename,
+            "{ext}": ext.lstrip("."),
+            "{audio}": "🎵" if is_audio and not is_video else "",
+            "{video}": "🎬" if is_video else "",
+            "{image}": "🖼️" if is_image and not is_video else "",
+            "{document}": "📄" if not is_video and not is_audio and not is_image else "",
+            "{duration}": duration_hms,
+            "{seconds}": f"{seconds}",
+            "{width}": f"{width}" if width else "",
+            "{height}": f"{height}" if height else "",
+            "{resolution}": resolution,
+            "{quality}": quality,
+            "{artist}": artist or "",
+            "{title}": title or "",
+            "{vcodec}": vcodec,
+            "{acodec}": acodec,
+            "{subs}": subs,
+            "{text}": cap_mono,
+        }
+        for k, v in tokens.items():
+            text = text.replace(k, v)
+        if not text.strip():
+            text = cap_mono
+        text = await self._prepare_caption_font(text)
+        return text
 
     def _get_input_media(self, subkey, key, msg_list=None):
         rlist = []
@@ -504,7 +561,7 @@ class TelegramUploader:
                         dirpath,
                         delete_file
                     )
-                    cap_mono = await self._prepare_caption_font(cap_mono)
+                    cap_mono = await self._apply_caption_template(cap_mono, file_)
                     if self._last_msg_in_group:
                         group_lists = [
                             x for v in self._media_dict.values() for x in v.keys()
